@@ -1,0 +1,237 @@
+---
+title: "Semana 18"
+date: "7/08/2019""
+output: html_document
+---
+
+```{r}
+library(jcolors)
+library(tidyverse)
+library(rworldmap)
+library(maps)
+library(ggthemes)
+library(extrafont)
+library(DT)
+library(dplyr)
+library(showtext) 
+```
+
+Read data:
+
+```{r}
+felicidad <- readr::read_csv("https://raw.githubusercontent.com/cienciadedatos/datos-de-miercoles/master/datos/2019/2019-08-07/felicidad.csv")
+View(felicidad)
+```
+
+Clean data:
+
+```{r}
+
+#trabajo con el paquete codelist para obtener lista de los paises en español
+country2<-countrycode::codelist
+View(country2)
+country2 <-country2%>%select(country.name.en,un.name.es)   #selecciona el código y el nombre del país
+
+#corrijo los nombres para unir la tabla country2 con world_map	
+country2$country.name.en[country2$country.name.en=='United Kingdom']='UK'
+country2$country.name.en[country2$country.name.en=='United States']='USA'
+# paises con NA, los completo
+country2[114,2]="Hong Kong"
+country2[132,2]="Kosovo"
+country2[186,2]="Estado de Palestina"
+country2[240,2]="Taiwán"
+
+```
+
+Check names de felicidad with country2
+
+```{r}
+
+anti_join(felicidad, country2, by=c("pais"="un.name.es"))%>%View()  #32 países
+
+```
+
+
+Need to recode some country names to match map_data:
+
+```{r}
+#corrijo los nombres de country2 para poner unir la tabla country2 con felicidad
+country2 <- country2%>%
+   mutate(un.name.es = recode(un.name.es,
+                                "Bolivia (Estado Plurinacional de)"="Bolivia",
+                                "Bhután"="Reino de Bután",
+                                "Côte d'Ivoire"= "Costa de Marfil", 
+                                "Gambia (República de)"="Gambia",
+                                "Estados Unidos de América"="Estados Unidos",
+                                "Eslovenia "="Eslovenia",
+                                "ex República Yugoslava de Macedonia"="Macedonia",
+                                "Irán (República Islámica del)"="Irán",
+                                "Iraq"="Irak",
+                                "Kenya" = "Kenia",
+                                "Nueva Zelandia"="Nueva Zelanda",
+                                "Rwanda"="Ruanda",
+                                "República de Corea"="Corea del Sur",
+                                "Reino Unido de Gran Bretaña e Irlanda del Norte"="Reino Unido",
+                                "República de Moldova"="Moldova",
+                                "República Democrática Popular Lao"="Laos",
+                                "Suriname"="Surinam",
+                                "Venezuela (República Bolivariana de)"="Venezuela",
+                                "Viet Nam"="Vietnam",
+                                "Zimbabwe"="Zimbabue"))filter(!is.na(un.name.es))%>%View()
+
+
+View(country2)
+#corrijo los nombres de felicidad para poner unirla con country2 
+felicidad <- felicidad %>%
+  mutate(pais = recode(pais,
+                                "Afghanistán"= "Afganistán",  
+                                "Algeria" = "Argelia",
+                                "Azerbaijan" = "Azerbaiyán",
+                                "Bielorrusia" ="Belarús",
+                                "Bhutan"="Reino de Bután",
+                                "Cambodia" = "Camboya",
+                                "Comoros"="Comoras", 
+                                "Congo (Brazzaville)" = "Congo",
+                                "Iran"="Irán",
+                                "Kazakhstan"="Kazajstán",
+                                "Kyrgyzstan"="Kirguistán",
+                                "Latvia"="Letonia",
+                                "Libya"= "Libia",
+                                "Mali"="Malí",
+                                "Mauritius"="Mauritania",
+                                "Pakistan"="Pakistán",
+                                "Swaziland"="Swazilandia",
+                                "Turkmenistan"="Turkmenistán",
+                                "Uzbekistan"="Uzbekistán",
+                                "Greece"="Grecia",
+                                "Hong Kong S.A.R. of China"="Hong Kong",
+                                "Bahrain"="Bahrein",
+                                "Belize"="Belice",
+                                "República Central Africana"="República Centroafricana",
+                                "Oman"="Omán",
+                                "Palestinian Territories"="Estado de Palestina",
+                                 "Rusia"="Federación de Rusia",
+                                 "Somalía"="Somalia",
+                                 	"South Sudan"="Sudán del Sur",
+                                 "Sudan"="Sudán",
+                                 "Syria"="República Árabe Siria",
+                                 "Tajikistan"="Tayikistán",
+                                 "Tanzania"="República Unida de Tanzanía"))
+View(felicidad) 
+
+anti_join(felicidad, country2, by=c("pais"="un.name.es"))%>%View()  #3 países:Congo (Kinshasa),North Cyprus y Somaliland region, estos 3 paises están en la tabla principal pero no en country2, así que no los puedo matchear.
+                              
+```
+
+
+caclulate the happy index for the last year
+```{r}
+felicidadMax <-felicidad %>%filter (!is.na(escalera_vida)) %>%group_by(pais)%>% filter(anio==max(felicidad$anio))%>% select(pais, anio,escalera_vida)%>% mutate(escalera_vida = round(escalera_vida,3))
+
+datatable(felicidadMax)
+```
+
+
+Join the data with map data:
+
+```{r}
+
+
+world_map <- map_data("world")
+View(world_map)
+
+primeraUnion <-merge(felicidadMax, country2, by.x = "pais", by.y="un.name.es")
+View(primeraUnion)
+
+#--------------------------------------------------------
+mapa_datos <- primeraUnion %>%full_join(world_map, by = c("country.name.en"="region" )) 
+View (mapa_datos)
+
+
+#para los ejes
+ejeMin<-felicidadMax%>%group_by(anio)%>%summarise(min(escalera_vida))%>%View()
+ejeMax<-felicidadMax%>%group_by(anio)%>%summarise(max(escalera_vida))%>%View()
+
+```
+
+
+Plot:
+
+```{r}
+library(showtext) # for google fonts
+font_add_google("Fira Mono", "firamono")
+#showtext_auto()
+
+ggplot(mapa_datos, aes(x = long, y = lat)) +
+     geom_polygon(aes(fill = escalera_vida, group = group), color = "black", size = 0.2) +
+     scale_fill_jcolors_contin(palette = "pal12")+  #se distingen bien los colores
+     theme_fivethirtyeight() + 
+     theme(axis.line=element_blank(),
+           axis.text.x=element_blank(),
+           axis.text.y=element_blank(),
+           panel.grid.major=element_blank(),
+           panel.grid.minor=element_blank(),
+          legend.background = element_rect(fill='#2a2a2a'),
+          #text = element_text(family = "firamono"),
+          legend.text = element_text(color='white'),
+          plot.background = element_rect(fill='#2a2a2a',color ='#2a2a2a' ),
+          panel.background =element_rect(fill='#2a2a2a'),
+    #legend.position=c(0.11, 0.32),
+         legend.key = element_rect(fill = "#2a2a2a", color = NA),
+         legend.title = element_text(color = "white", size = 15, hjust = 0.5),
+         plot.title = element_text(family ="firamono"    ,
+                              hjust = 0.5,
+                              size=20,colour = 'white', #
+                              face = 'bold'),
+         plot.caption = element_text(hjust =0.8,
+                                size=8,
+                                #face = 'bold',
+                                colour = 'white')) +
+     labs(fill = "Indice de felicidad",
+          title = "¿Cuáles son los países más felices?",
+          caption = str_c(str_wrap("Indice de felicidad por país usando los datos más recientes para cada país.\ Los colores en tonalidad amarilla tienen valores cercanos a la media. Los paises en naranja tienen un mayor índice  de felicidad, mientras que los países en azul tienen un índice menos favorable.\ El color gris indica datos faltantes.", width = 120),"\nData Source: https://worldhappiness.report/\nVisualización: @PatriLoto")) 
+
+
+ggsave("mapafinal.pdf", width = 6.5, height = 5.5)
+ggsave("mapa.png", width = 7.4, height = 4.5)
+
+```
+
+```{r}
+
+ggplot(mapa_datos, aes(x = long, y = lat)) +
+     geom_polygon(aes(fill = escalera_vida, group = group), color = "black", size = 0.2) +
+  scale_fill_jcolors_contin(palette = "pal4")+
+     theme_fivethirtyeight() + 
+     theme(axis.line=element_blank(),
+           axis.text.x=element_blank(),
+           axis.text.y=element_blank(),
+           panel.grid.major=element_blank(),
+           panel.grid.minor=element_blank(),
+         legend.background = element_rect(fill='#2a2a2a'),
+   legend.text = element_text(color='white'),
+   plot.background = element_rect(fill='#2a2a2a',color ='#2a2a2a' ),
+    panel.background =element_rect(fill='#2a2a2a'),
+    legend.key = element_rect(fill = "#2a2a2a", color = NA, size = 15),
+    legend.title = element_text(color = "white", size = 30, hjust = 0.5),
+    plot.title = element_text(family ="Pacifico"    ,
+                              hjust = 0.5,
+                              size=20,colour = 'grey', #
+                              face = 'bold'),
+    plot.subtitle =  element_text(family ="Atma Light"     ,
+                                  hjust = 0.5,
+                                  size=15, face = 'bold',
+                                  colour = '#73d055ff' ),
+    plot.caption = element_text(family ="Atma Light"     ,
+                                hjust =0.8,
+                                size=20,
+                                #face = 'bold',
+                                colour = 'white')) +
+     labs(fill = "Indice de felicidad",
+          title = "¿Cuáles son los paises más felices?",
+          caption = str_c(str_wrap("Indice de felicidad por país usando los datos más recientes para cada país. Los paises que presentan colores más claros tienen un índice mayor de felicidad, mientras que los países en azul tienen un índice menos favorable. El color gris indica datos faltantes.", width = 120),"\ Data Source: https://worldhappiness.report/\nVisualización: @PatriLoto")) 
+
+ggsave("mapa2.png", width = 7.4, height = 4.5)
+
+```
+
