@@ -189,7 +189,7 @@ ggplot(mapa_datos, aes(x = long, y = lat)) +
                                 colour = 'white')) +
      labs(fill = "Indice de felicidad",
           title = "¿Cuáles son los países más felices?",
-          caption = str_c(str_wrap("Indice de felicidad por país usando los datos más recientes para cada país.\ Los colores en tonalidad amarilla tienen valores cercanos a la media. Los paises en naranja tienen un mayor índice  de felicidad, mientras que los países en azul tienen un índice menos favorable.\ El color gris indica datos faltantes.", width = 120),"\nData Source: https://worldhappiness.report/\nVisualización: @PatriLoto")) 
+          caption = str_c(str_wrap("Indice de felicidad por país usando los datos más recientes para cada país. Los colores en tonalidad amarilla tienen valores cercanos a la media. Los paises en naranja tienen un mayor índice  de felicidad, mientras que los países en azul tienen un índice menos favorable. El color gris indica datos faltantes.", width = 120),"\nData Source: https://worldhappiness.report/\nVisualización: @PatriLoto")) 
 
 #distintas escalas
 ggsave("mapa.png", width = 7.4, height = 4.5)        #gráfico 1 para Twitter
