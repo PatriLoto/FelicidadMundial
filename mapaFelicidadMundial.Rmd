@@ -112,7 +112,7 @@ felicidad <- felicidad %>%
                                 "Palestinian Territories"="Estado de Palestina",
                                  "Rusia"="Federación de Rusia",
                                  "Somalía"="Somalia",
-                                 	"South Sudan"="Sudán del Sur",
+                                 "South Sudan"="Sudán del Sur",
                                  "Sudan"="Sudán",
                                  "Syria"="República Árabe Siria",
                                  "Tajikistan"="Tayikistán",
