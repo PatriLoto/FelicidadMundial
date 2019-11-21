@@ -1,0 +1,228 @@
+---
+title: "Week 19"
+output:  html_document
+---
+
+```{r}
+#install.packages("rworldmap")
+#install.packages("ggthemes")
+library(tidyverse)
+library(here)
+library(rworldmap)
+library(ggthemes)
+library(formattable)
+```
+
+Read data:
+
+```{r}
+student_ratio <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2019/2019-05-07/student_teacher_ratio.csv")
+View(student_ratio)
+
+```
+
+Clean data and calculate median:
+
+```{r}
+
+# los datos más actuales son del 2018
+student_ratio%>% summarize(max(year))
+student_ratio%>% filter(year =='2018')%>% group_by(indicator)
+#ultimo año=2017
+
+
+med_ratios <- student_ratio %>% 
+  filter(!is.na(student_ratio)) %>%      # remove NAs
+  group_by(country_code, indicator) %>%
+  filter(year == max(year)) %>%          # grab the most recent data for each country and education level
+  ungroup() %>%
+  group_by(country_code, country) %>%
+  summarise(median_ratio = median(student_ratio)) 
+
+#promedio de estudiantes/profesor por país para todos los niveles educativos en el año 2017
+mediaEducacion17 <- student_ratio %>% 
+  filter(!is.na(student_ratio))%>%
+  group_by(country_code,indicator)%>%
+  filter(year==2017)%>%ungroup()%>%
+  group_by(country_code, country)%>%
+  summarise(promedio= median(student_ratio))%>%View()
+#2018
+mediaEducacion18 <- student_ratio %>% 
+  filter(!is.na(student_ratio))%>%
+  group_by(country_code,indicator)%>%
+  filter(year==2018)%>%ungroup()%>%
+  group_by(country_code, country)%>%
+  summarise(promedio= median(student_ratio))%>%View()
+#2017 educación primaria
+mediaEducacionPrimaria <- student_ratio %>% 
+  filter(!is.na(student_ratio))%>%
+  group_by(country_code,indicator)%>%
+  filter(year==2017 & indicator=='Primary Education')%>%ungroup()%>%   # Primary Tertiary 
+  group_by(country_code, country)%>%
+  summarise(promedio= median(student_ratio)) #%>%View()
+
+mediaEducacionSecundaria <- student_ratio %>% 
+  filter(!is.na(student_ratio))%>%
+  group_by(country_code,indicator)%>%
+  filter(year==2015 & (indicator %in% c('Secondary Education','Lower Secondary Education', 'Upper Secondary Education')))%>% ungroup()%>%   # Primary 
+  group_by(country_code, country)%>%
+  summarise(promedioSe= median(student_ratio)) # %>%View()
+View(mediaEducacionSecundaria)
+tabla <-mediaEducacionSecundaria %>% select(country,promedioSe)%>%summarise('promedio'=round(promedioSe))
+tabla
+formattable(tabla)
+customGreen0 = "#DeF7E9"
+
+customGreen = "#71CA97"
+
+customRed = "#ff7f7f"
+formattable(tabla, 
+            align =c("l","r"), 
+            list(`promedio`= formatter( "span", style = promedio ~ style(
+              font.weight = "bold", 
+              color = ifelse(promedio < 30, customGreen, ifelse(promedio> = 30, customRed,"black"))))))
+
+
+ formatter("span", 
+            style = x ~ style(
+              font.weight = "bold", 
+              color = ifelse(x < 0, customGreen, ifelse(x > 0, customRed, "black"))))
+```
+
+Check names in med_ratios compared to map_data("world")
+
+```{r}
+anti_join(mediaEducacionPrimaria, map_data("world"), by = c("country" = "region")) %>% View()
+
+anti_join(mediaEducacionSecundaria, map_data("world"), by = c("country" = "region")) %>% View()
+p <-map_data("world")%>%filter (region %in% 'Saint Vincent and the Grenadines')%>%view()
+```
+
+
+Need to recode some country names to match map_data:
+
+```{r}
+EducacionSecundaria_fixed <- mediaEducacionSecundaria %>%   #EducacionPrimaria_fixed
+  mutate(country = recode(country,
+                                "United States of America" = "USA",
+                                "Viet Nam" = "Vietnam",
+                                "British Virgin Islands" = "Virgin Islands",
+                                "United Republic of Tanzania" = "Tanzania",
+                                "Syrian Arab Republic" = "Syria",
+                                "Russian Federation" = "Russia",
+                                "Democratic People's Republic of Korea" = "North Korea",
+                                "The former Yugoslav Republic of Macedonia" = "Macedonia",
+                                "Republic of Moldova" = "Moldova",
+                                "Republic of Korea" = "South Korea",
+                                "Côte d'Ivoire" = "Ivory Coast",
+                                "Iran (Islamic Republic of)" = "Iran",
+                           "United Kingdom of Great Britain and Northern Ireland" = "UK",
+                                "Micronesia (Federated States of)" = "Micronesia",
+                                "Czechia" = "Czech Republic",
+                                "Cabo Verde" = "Cape Verde",
+                                "Congo" = "Democratic Republic of the Congo",
+                                "Brunei Darussalam" = "Brunei",
+                                "Bolivia (Plurinational State of)" = "Bolivia", 
+                                 "Oceania"= "Australia",
+                                 "Lao People's Democratic Republic"= "Laos"))
+# vuelvo a verificar los valores
+anti_join(EducacionPrimaria_fixed, map_data("world"), by = c("country" = "region")) %>% View()   
+
+med_ratios_fixed <- med_ratios %>%
+  mutate(country = recode(country,
+                                "United States of America" = "USA",
+                                "Viet Nam" = "Vietnam",
+                                "British Virgin Islands" = "Virgin Islands",
+                                "United Republic of Tanzania" = "Tanzania",
+                                "Syrian Arab Republic" = "Syria",
+                                "Russian Federation" = "Russia",
+                                "Democratic People's Republic of Korea" = "North Korea",
+                                "The former Yugoslav Republic of Macedonia" = "Macedonia",
+                                "Republic of Moldova" = "Moldova",
+                                "Republic of Korea" = "South Korea",
+                                "Côte d'Ivoire" = "Ivory Coast",
+                                "Iran (Islamic Republic of)" = "Iran",
+                                "United Kingdom of Great Britain and Northern Ireland" = "UK",
+                                "Micronesia (Federated States of)" = "Micronesia",
+                                "Czechia" = "Czech Republic",
+                                "Cabo Verde" = "Cape Verde",
+                                "Congo" = "Democratic Republic of the Congo",
+                                "Brunei Darussalam" = "Brunei",
+                                "Bolivia (Plurinational State of)" = "Bolivia", 
+                                 "Oceania"= "Australia",
+                                 "Lao People's Democratic Republic"= "Laos"))
+   
+formattable(i1)
+EducacionPrimaria_fixed                         
+```
+
+Join median student teacher ratio data with map data:
+
+```{r}
+my_map_data <- med_ratios_fixed %>%
+  full_join(map_data("world"), by = c("country" = "region")) %>% 
+  filter(!grepl("Antarctica",country)) #don't need Antarctica
+
+mi_mapa <- EducacionPrimaria_fixed %>%
+  full_join(map_data("world"), by = c("country" = "region")) %>% 
+  filter(!grepl("Antarctica",country)) #don't need Antarctica
+
+mi_mapaSE <- mediaEducacionSecundaria %>%
+  full_join(map_data("world"), by = c("country" = "region")) %>% 
+  filter(!grepl("Antarctica",country)) #don't need Antarctica
+
+
+```
+
+
+Plot:
+
+```{r}
+ggplot(my_map_data, aes(x = long, y = lat)) +
+     geom_polygon(aes(fill = media_ratio, group = group), color = "black", size = 0.2) +
+     scale_fill_gradient2(low = "darkgreen", high = "blue", midpoint = 17.428480) +
+     #scale_fill_gradient2()+  #paleta de lilas
+     #scale_fill_continuous_tableau()+ #paleta de azules
+     #scale_fill_viridis_c()+  #viridis
+     theme_fivethirtyeight() + 
+     theme(axis.line=element_blank(),
+           axis.text.x=element_blank(),
+           axis.text.y=element_blank(),
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank()) +
+     labs(fill = "ratio",
+          title = "Median Student to Teacher Ratios",
+          caption = str_c(str_wrap("Median student-to-teacher ratio calculated across all education levels using the most recent data for each level. White indicates a median ratio close to the world median. Countries shown in blue have a smaller ratio, while countries shown in red have a larger (less favorable) ratio. Grey indicates missing data.", width = 120),"\nData Source: UNESCO\nVisualization: @AmandaRPlunkett")) 
+
+
+ggplot(mi_mapaSE, aes(x = long, y = lat)) +
+     geom_polygon(aes(fill = promedioSe, group = group), color = "black", size = 0.2) + 
+  scale_fill_continuous_tableau() + #gray80
+ # scale_fill_gradient2(low = "#1B7837", high = "#B10026",mid = "white", midpoint = 17.428480) +
+  #scale_fill_gradient2(low = "#FFFFCC", mid = "white", high = "#B10026",  midpoint = 17.428480)+
+    # low = "#FFFFCC", mid = "#FEB24C", high = "red"
+  #low = "#762A83", mid = "white", high = "#1B7837"
+   #low = "#FFFFCC", mid = "#FEB24C", high = "#B10026"
+    #low = "#1B7837" "blue", mid = "white", high = "#B10026", high = "red"
+    #scale_fill_gradient2(low = "darkgreen", high = "blue", midpoint = 17.428480) 
+     #scale_fill_gradient2()+  #paleta de lilas
+     #scale_fill_continuous_tableau()+ #paleta de azules
+     #scale_fill_viridis_c()+  #viridis
+     theme_fivethirtyeight() + 
+     theme(axis.line=element_blank(),
+           axis.text.x=element_blank(),
+           axis.text.y=element_blank(),
+          panel.grid.major=element_blank(),
+          panel.grid.minor=element_blank()) +
+     labs(fill = " proporción E/P",
+          title = "Datos de Educación secundaria del año 2015",
+          subtitle="Promedio de la proporción estudiantes/profesores (E/P)",
+          caption = str_c(str_wrap("El Promedio de la proporción estudiantes/profesor fue calculado teniendo en cuenta los datos del año 2015 para el nivel de educación secundaria. Los países que se muestran en celeste tienen un ratio más pequeño, mientras que los países que se muestran en azul tienen un ratio más alto, es decir, menos favorable). El color gris indica datos faltantes.", width = 115),"\n \nData Source: UNESCO\nVisualization: @patriloto")) 
+  
+```
+
+
+
+```{r}
+ggsave("studentTeacherRatios2.png", width = 7.4, height = 4.5, dpi = "retina")
+```
