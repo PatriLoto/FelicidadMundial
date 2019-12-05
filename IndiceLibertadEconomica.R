@@ -67,6 +67,8 @@ menor_lib_economica
 mayor_lib_económica <- libertad%>%filter(anio==2016)%>%top_n(5,libertad_economica_puntaje)%>%
   select(pais,libertad_economica_puntaje, codigo_iso)%>%
   arrange(desc(libertad_economica_puntaje))        # %>%View()
+
+# probar patchwork con los gráficos de libertad económica 
 #------------------------------------------------------------------------------
 ##Libertad humana
 
