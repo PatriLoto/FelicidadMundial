@@ -91,6 +91,8 @@ menor_lib_personal <-libertad%>%filter(anio==2016)%>%top_n(-5,libertad_personal_
 mayor_lib_personal <-libertad%>%filter(anio==2016)%>%top_n(5,libertad_personal_puntaje)%>%
   select(pais,libertad_personal_puntaje, )%>%
   arrange(desc(libertad_personal_puntaje))        #%>%View()
+# agregar graficos de barras para libertad personal 
+
 #--------------------------------------------------------------------------------------------
 menor_lib_economica
 #NO TENEMOS EN CUENTA REBUBLICA DEL CONGO PORQUE NO TIENE LOS VALORES DE LAT Y LONG
